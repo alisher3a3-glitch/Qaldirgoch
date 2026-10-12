@@ -19,7 +19,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is running V4 PERFECT")
+        self.wfile.write(b"Bot is running V6 - yomkost fix, tayyor knopka, no empty lines")
     def log_message(self, *args): pass
 
 def run_dummy():
@@ -66,6 +66,12 @@ def tasdiq_menu():
     kb.add("✅ Tasdiqlash va kanalga yuborish", "❌ Bekor qilish")
     return kb
 
+def rasm_menu():
+    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("✅ Tayyor")
+    return kb
+
+
 @bot.message_handler(commands=['start','cancel'])
 def start(m):
     user_states.pop(m.from_user.id, None)
@@ -89,31 +95,35 @@ def elon(m):
     bot.send_message(m.chat.id, "📂 Qaysi turdagi telefon?", reply_markup=kategoriya_menu())
 
 def make_caption(d, sold=False):
-    # Xatosiz, chiroyli caption
-    sold_top = "✅ <b>SOTILDI!</b>\n\n" if sold else ""
-    xotira = f"💾 Xotira: {d['xotira']}\n" if d.get('xotira') and d['xotira'] != "—" else ""
-    batareya = f"🔋 Batareya: {d['batareya']}\n" if d.get('batareya') and d['batareya'] != "—" else ""
-    
-    # Hashtag toza
+    sold_top = "✅ <b>SOTILDI!</b>
+" if sold else ""
+    xotira = f"💾 Xotira: {d['xotira']}
+" if d.get('xotira') and d['xotira'] != "—" else ""
+    # Afonda yomkost = batareya
+    batareya_val = d.get('batareya','—')
+    if batareya_val and batareya_val != "—":
+        # iPhone uchun Yomkost deb yozamiz
+        if any(k in d.get('model','').lower() for k in ["iphone","ayfon","айфон"]):
+            batareya = f"🔋 Yomkost: {batareya_val}
+"
+        else:
+            batareya = f"🔋 Batareya: {batareya_val}
+"
+    else:
+        batareya = ""
     model_tag = "#" + d['model'].replace(' ','_').replace('-','_')[:20]
     manzil_tag = "#" + d['manzil'].split()[0].replace(',','')
-    
     return f"""{sold_top}<b>📱 {d['kategoriya']} — {d['model']}</b>
-
 {xotira}{batareya}🎨 Rangi: {d['rangi']}
 📦 Komplekt: {d['komplekt']}
 💰 <b>Narxi: {d['narx']}</b>
-
 📝 {d['tavsif']}
-
 📍 Manzil: {d['manzil']}
 📞 Tel: {d['tel']}
 ⏰ {d['bezovta_vaqti']}
-
 ——————————
 🛡️ <b>ISHONCHLI SAVDO MAVJUD</b>
 Admin {ADMIN_USERNAME} orqali xavfsiz xarid
-
 📢 {CHANNEL} | {BOT_USERNAME}
 {model_tag} {manzil_tag}"""
 
@@ -139,7 +149,7 @@ def handler(message):
             bot.send_message(message.chat.id, "❗ Modelni to'liq yozing!")
             return
         data["model"] = txt
-        if "iphone" in txt.lower():
+        if any(k in txt.lower() for k in ["iphone", "ayfon", "айфон"]):
             st["step"] = "xotira"
             bot.send_message(message.chat.id, "💾 Xotirasi? (Misol: 128GB)")
         else:
@@ -151,13 +161,13 @@ def handler(message):
     if step == "xotira":
         data["xotira"] = message.text.strip()
         st["step"] = "batareya"
-        bot.send_message(message.chat.id, "🔋 Batareya %? (Misol: 90%)")
+        bot.send_message(message.chat.id, "🔋 Yomkost nechi %? (Misol: 85%)")
         return
 
     if step == "batareya":
         data["batareya"] = message.text.strip()
         st["step"] = "rangi"
-        bot.send_message(message.chat.id, "🎨 Rangi?")
+        bot.send_message(message.chat.id, "🎨 Rangi? (Misol: Qora)")
         return
 
     if step == "rangi":
@@ -175,16 +185,16 @@ def handler(message):
     if step == "narx":
         data["narx"] = message.text.strip()
         st["step"] = "rasm"
-        bot.send_message(message.chat.id, "📸 Telefon rasmlarini yuboring (1-10 ta).\nFaqat telefon rasmi bo'lsin, banner emas!\nTayyor bo'lgach '✅ Tayyor' deb yozing.")
+        bot.send_message(message.chat.id, "📸 Telefon rasmlarini yuboring (1-10 ta).", reply_markup=rasm_menu())
         return
 
     if step == "rasm":
         if message.content_type == 'photo':
             if len(st["photos"]) < 10:
                 st["photos"].append(message.photo[-1].file_id)
-                bot.send_message(message.chat.id, f"✅ {len(st['photos'])} ta qabul qilindi. Yana yuboring yoki '✅ Tayyor' deb yozing.")
+                bot.send_message(message.chat.id, f"✅ {len(st['photos'])} ta qabul qilindi.", reply_markup=rasm_menu())
             else:
-                bot.send_message(message.chat.id, "10 ta bo'ldi, '✅ Tayyor' deb yozing.")
+                bot.send_message(message.chat.id, "10 ta bo'ldi, pastdagi ✅ Tayyor ni bosing.", reply_markup=rasm_menu())
             return
         if message.text in ["✅ Tayyor","Tayyor","✅","✅ Rasmlar tayyor"]:
             if not st["photos"]:
@@ -261,7 +271,7 @@ def handler(message):
         if message.text == "✅ Tasdiqlash va kanalga yuborish":
             cap = make_caption(data)
             markup = types.InlineKeyboardMarkup(row_width=1)
-            markup.add(types.InlineKeyboardButton("📞 Sotuvchi", url=f"https://t.me/{ADMIN_USERNAME[1:]}"))
+            markup.add(types.InlineKeyboardButton("📞 Sotuvchi bilan bog'lanish", url=f"https://t.me/{ADMIN_USERNAME[1:]}"))
             markup.add(types.InlineKeyboardButton("🛡️ Admin orqali xavfsiz olish", url=f"https://t.me/{ADMIN_USERNAME[1:]}"))
             try:
                 if len(st["photos"]) == 1:
@@ -312,5 +322,5 @@ def cb(call):
         bot.answer_callback_query(call.id, "✅ Sotildi!")
         bot.send_message(call.message.chat.id, "✅ SOTILDI deb belgilandi!")
 
-print("Bot V4 PERFECT started...")
+print("Bot V6 - Ayfon yomkost = batareya, tayyor knopkali, elonda bo'sh joy yo'q...")
 bot.infinity_polling()

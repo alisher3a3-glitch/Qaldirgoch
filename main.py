@@ -19,14 +19,16 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is running V6 - yomkost fix, tayyor knopka, no empty lines")
-    def log_message(self, *args): pass
+        self.wfile.write(b"Bot V6 running")
+    def log_message(self, *args):
+        pass
 
 def run_dummy():
     port = int(os.environ.get("PORT", 10000))
     try:
         HTTPServer(("0.0.0.0", port), Handler).serve_forever()
-    except: pass
+    except:
+        pass
 
 threading.Thread(target=run_dummy, daemon=True).start()
 
@@ -40,6 +42,7 @@ c.execute("""CREATE TABLE IF NOT EXISTS elonlar
               komplekt TEXT, narx TEXT, tavsif TEXT, manzil TEXT, tel TEXT,
               bezovta_vaqti TEXT, rasmlar TEXT, status TEXT)""")
 conn.commit()
+
 user_states = {}
 
 def main_menu():
@@ -71,13 +74,12 @@ def rasm_menu():
     kb.add("✅ Tayyor")
     return kb
 
-
-@bot.message_handler(commands=['start','cancel'])
+@bot.message_handler(commands=['start', 'cancel'])
 def start(m):
     user_states.pop(m.from_user.id, None)
     bot.send_message(m.chat.id, f"👋 Assalomu alaykum!\n\n📱 <b>{CHANNEL}</b> kanali boti\n\n👇 Menudan tanlang:", reply_markup=main_menu())
 
-@bot.message_handler(func=lambda m: m.text in ["🤝 Hamkorlik","🛡️ Ishonchli savdo","☕ Choy chaqa","⬅️ Orqaga"])
+@bot.message_handler(func=lambda m: m.text in ["🤝 Hamkorlik", "🛡️ Ishonchli savdo", "☕ Choy chaqa", "⬅️ Orqaga"])
 def info(m):
     if m.text == "🤝 Hamkorlik":
         bot.send_message(m.chat.id, f"🤝 Reklama va hamkorlik uchun: {ADMIN_USERNAME}", reply_markup=main_menu())
@@ -91,43 +93,27 @@ def info(m):
 
 @bot.message_handler(func=lambda m: m.text == "📢 E'lon berish")
 def elon(m):
-    user_states[m.from_user.id] = {"step":"kategoriya","data":{},"photos":[]}
+    user_states[m.from_user.id] = {"step": "kategoriya", "data": {}, "photos": []}
     bot.send_message(m.chat.id, "📂 Qaysi turdagi telefon?", reply_markup=kategoriya_menu())
 
 def make_caption(d, sold=False):
-    sold_top = "✅ <b>SOTILDI!</b>
-" if sold else ""
-    xotira = f"💾 Xotira: {d['xotira']}
-" if d.get('xotira') and d['xotira'] != "—" else ""
-    # Afonda yomkost = batareya
-    batareya_val = d.get('batareya','—')
-    if batareya_val and batareya_val != "—":
-        # iPhone uchun Yomkost deb yozamiz
-        if any(k in d.get('model','').lower() for k in ["iphone","ayfon","айфон"]):
-            batareya = f"🔋 Yomkost: {batareya_val}
-"
+    sold_top = "✅ <b>SOTILDI!</b>\n" if sold else ""
+    xotira = ""
+    if d.get('xotira') and d['xotira'] != "—":
+        xotira = f"💾 Xotira: {d['xotira']}\n"
+    batareya = ""
+    bval = d.get('batareya', '—')
+    if bval and bval != "—":
+        if any(k in d.get('model','').lower() for k in ["iphone", "ayfon", "айфон"]):
+            batareya = f"🔋 Yomkost: {bval}\n"
         else:
-            batareya = f"🔋 Batareya: {batareya_val}
-"
-    else:
-        batareya = ""
-    model_tag = "#" + d['model'].replace(' ','_').replace('-','_')[:20]
-    manzil_tag = "#" + d['manzil'].split()[0].replace(',','')
-    return f"""{sold_top}<b>📱 {d['kategoriya']} — {d['model']}</b>
-{xotira}{batareya}🎨 Rangi: {d['rangi']}
-📦 Komplekt: {d['komplekt']}
-💰 <b>Narxi: {d['narx']}</b>
-📝 {d['tavsif']}
-📍 Manzil: {d['manzil']}
-📞 Tel: {d['tel']}
-⏰ {d['bezovta_vaqti']}
-——————————
-🛡️ <b>ISHONCHLI SAVDO MAVJUD</b>
-Admin {ADMIN_USERNAME} orqali xavfsiz xarid
-📢 {CHANNEL} | {BOT_USERNAME}
-{model_tag} {manzil_tag}"""
+            batareya = f"🔋 Batareya: {bval}\n"
+    model_tag = "#" + d['model'].replace(' ', '_').replace('-', '_')[:20]
+    manzil_first = d['manzil'].split()[0].replace(',', '').replace(' ', '_')
+    manzil_tag = "#" + manzil_first
+    return f"{sold_top}<b>📱 {d['kategoriya']} — {d['model']}</b>\n{xotira}{batareya}🎨 Rangi: {d['rangi']}\n📦 Komplekt: {d['komplekt']}\n💰 <b>Narxi: {d['narx']}</b>\n📝 {d['tavsif']}\n📍 Manzil: {d['manzil']}\n📞 Tel: {d['tel']}\n⏰ {d['bezovta_vaqti']}\n——————————\n🛡️ <b>ISHONCHLI SAVDO MAVJUD</b>\nAdmin {ADMIN_USERNAME} orqali xavfsiz xarid\n📢 {CHANNEL} | {BOT_USERNAME}\n{model_tag} {manzil_tag}"
 
-@bot.message_handler(content_types=['text','contact','photo'])
+@bot.message_handler(content_types=['text', 'contact', 'photo'])
 def handler(message):
     uid = message.from_user.id
     if uid not in user_states:
@@ -137,7 +123,8 @@ def handler(message):
     data = st["data"]
 
     if step == "kategoriya":
-        if message.text not in ["📱 Smartphone","📞 Knopkali telefon","🎧 Aksessuar"]: return
+        if message.text not in ["📱 Smartphone", "📞 Knopkali telefon", "🎧 Aksessuar"]:
+            return
         data["kategoriya"] = message.text
         st["step"] = "model"
         bot.send_message(message.chat.id, "📱 Modelini yozing:\nMisol: iPhone 14", reply_markup=types.ReplyKeyboardRemove())
@@ -196,12 +183,12 @@ def handler(message):
             else:
                 bot.send_message(message.chat.id, "10 ta bo'ldi, pastdagi ✅ Tayyor ni bosing.", reply_markup=rasm_menu())
             return
-        if message.text in ["✅ Tayyor","Tayyor","✅","✅ Rasmlar tayyor"]:
+        if message.text == "✅ Tayyor":
             if not st["photos"]:
-                bot.send_message(message.chat.id, "❗ Kamida 1 ta telefon rasmi kerak!")
+                bot.send_message(message.chat.id, "❗ Kamida 1 ta rasm kerak!", reply_markup=rasm_menu())
                 return
             st["step"] = "tavsif"
-            bot.send_message(message.chat.id, "📝 Tavsif yozing:\nMisol: Ideal holatda, karobka hujjatlari bor, aybi yo'q")
+            bot.send_message(message.chat.id, "📝 Tavsif yozing:\nMisol: Ideal holatda, karobka hujjatlari bor, aybi yo'q", reply_markup=types.ReplyKeyboardRemove())
             return
         return
 
@@ -217,7 +204,7 @@ def handler(message):
 
     if step == "manzil":
         txt = message.text.strip()
-        if len(txt) < 4 or txt.lower() in ["salom","ha","yoq","hi","hello","assalom"]:
+        if len(txt) < 4 or txt.lower() in ["salom", "ha", "yoq", "hi", "hello", "assalom"]:
             bot.send_message(message.chat.id, "❗ Haqiqiy manzil yozing!\nMisol: Namangan sh")
             return
         data["manzil"] = txt
@@ -234,7 +221,7 @@ def handler(message):
                 st["step"] = "tel_yozish"
                 return
             txt = (message.text or "").strip()
-            if len(txt) < 9 or txt.lower() in ["salom","ha"]:
+            if len(txt) < 9 or txt.lower() in ["salom", "ha"]:
                 bot.send_message(message.chat.id, "❗ To'g'ri raqam yozing!\nMisol: +998913437333")
                 return
             data["tel"] = txt
@@ -303,7 +290,7 @@ def my(m):
         icon = "✅ SOTILDI" if status=="sold" else "🟢 Aktiv"
         kb = types.InlineKeyboardMarkup()
         if status=="active":
-            kb.add(types.InlineKeyboardButton("✅ SOTILDI", callback_data=f"sold_{eid}_{chmid}"))
+            kb.add(types.InlineKeyboardButton("✅ SOTILDI deb belgilash", callback_data=f"sold_{eid}_{chmid}"))
         bot.send_message(m.chat.id, f"{icon}\n📱 {model}\n💰 {narx}", reply_markup=kb)
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -318,9 +305,10 @@ def cb(call):
             if r:
                 d = {"kategoriya":r[0],"model":r[1],"xotira":r[2],"batareya":r[3],"rangi":r[4],"komplekt":r[5],"narx":r[6],"tavsif":r[7],"manzil":r[8],"tel":r[9],"bezovta_vaqti":r[10]}
                 bot.edit_message_caption(chat_id=CHANNEL, message_id=int(chmid), caption=make_caption(d, sold=True), parse_mode="HTML")
-        except: pass
+        except:
+            pass
         bot.answer_callback_query(call.id, "✅ Sotildi!")
         bot.send_message(call.message.chat.id, "✅ SOTILDI deb belgilandi!")
 
-print("Bot V6 - Ayfon yomkost = batareya, tayyor knopkali, elonda bo'sh joy yo'q...")
+print("Bot V6 FIXED started - yomkost, tayyor knopka, no empty lines")
 bot.infinity_polling()
